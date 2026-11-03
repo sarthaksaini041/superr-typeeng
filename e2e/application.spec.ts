@@ -798,14 +798,16 @@ test('free passages dialog filters by category and duration, selects passages of
   await page.getByRole('button', { name: 'Free passages' }).click()
   const dialog = page.getByRole('dialog', { name: 'Free passages' })
   await expect(dialog).toBeVisible()
-  await expect(
-    dialog.getByText('100 built-in passages · Instant practice without AI quota or API keys'),
-  ).toBeVisible()
+  await expect(dialog.locator('.passages-subtitle')).toHaveCount(0)
 
   const categoryGroup = dialog.getByRole('group', { name: 'Category' })
   const durationGroup = dialog.getByRole('group', { name: 'Test duration' })
   const cards = dialog.locator('.passage-card')
   await expect(cards).toHaveCount(100)
+  await expect(cards.nth(1).locator('.passage-card-title')).toHaveText('Down the Rabbit Hole')
+  await expect(cards.nth(1).locator('.passage-card-source')).toHaveText("Alice's Adventures in Wonderland")
+  await expect(cards.nth(1).locator('.passage-card-meta')).not.toContainText('words')
+  await expect(cards.nth(1)).not.toContainText('Excerpt')
 
   // Filter by Science Fiction category
   await categoryGroup.getByRole('button', { name: 'Science Fiction' }).click()
@@ -813,12 +815,15 @@ test('free passages dialog filters by category and duration, selects passages of
   expect(sciFiCount).toBeGreaterThan(0)
   expect(sciFiCount).toBeLessThan(100)
   await expect(cards.first().locator('.passage-card-badge')).toHaveText('Science Fiction')
+  await expect(cards.first().locator('.passage-card-title')).toHaveText('The Fourth Dimension Explained')
+  await expect(cards.first().locator('.passage-card-source')).toHaveText('The Time Machine')
 
   // Filter by Classic Fiction category and 90s duration
   await categoryGroup.getByRole('button', { name: 'Classic Fiction' }).click()
   await durationGroup.getByRole('button', { name: '90s', exact: true }).click()
   await expect(cards.first().locator('.passage-card-badge')).toHaveText('Classic Fiction')
-  await expect(cards.first().locator('.passage-card-meta')).toContainText('90s')
+  await expect(cards.first().locator('.passage-card-duration')).toHaveText('90s')
+  await expect(cards.first().locator('.passage-card-meta')).not.toContainText('words')
 
   // Selecting a passage from the list starts the typing test immediately with that topic & duration
   await cards.first().click()

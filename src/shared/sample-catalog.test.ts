@@ -37,11 +37,12 @@ describe('sample catalog', () => {
     expect(samples).toHaveLength(100)
     expect(new Set(samples.map(sample => sample.passage)).size).toBe(samples.length)
     expect(new Set(samples.map(sample => sample.id)).size).toBe(samples.length)
-    expect(new Set(samples.map(sample => `${sample.title}::${sample.subtitle}`)).size).toBe(samples.length)
+    expect(new Set(samples.map(sample => sample.title)).size).toBe(samples.length)
 
     const validCategories = new Set(SAMPLE_CATEGORIES.filter(category => category !== 'All'))
     for (const sample of samples) {
       expect(validCategories.has(sample.category)).toBe(true)
+      expect(sample.title).not.toMatch(/Excerpt \d+/i)
       expect(sample.source.length).toBeGreaterThan(0)
       expect(sample.preview.length).toBeGreaterThanOrEqual(20)
       expect(sample.passage).toMatch(/^[ -~]+$/)
@@ -90,11 +91,12 @@ describe('sample catalog', () => {
 
     const sciFi = listSamples({ category: 'Science Fiction', query: 'Time Machine', duration: 90 })
     expect(sciFi).toHaveLength(7)
-    expect(sciFi.every(item => item.title === 'The Time Machine')).toBe(true)
+    expect(sciFi.every(item => item.source === 'The Time Machine')).toBe(true)
 
     const byId = getSampleById(sciFi[0].id, 90)
     expect(byId.id).toBe(sciFi[0].id)
-    expect(byId.title).toBe('The Time Machine')
+    expect(byId.title).toBe('The Fourth Dimension Explained')
+    expect(byId.source).toBe('The Time Machine')
     expect(byId.category).toBe('Science Fiction')
     expect(byId.characterCount).toBe(byId.passage.length)
     expect(byId.wordCount).toBe(sciFi[0].wordCount)

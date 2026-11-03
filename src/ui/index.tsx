@@ -16,7 +16,16 @@ import {
   ViewOffSlashIcon,
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react'
 import { DURATIONS, splitGraphemes, TOPIC_MAX_LENGTH, TOPIC_MAX_CODE_UNITS, type Duration } from '../shared/passage'
 import {
   AI_PROVIDERS,
@@ -514,7 +523,7 @@ export function SettingsDialog({
                   ? `Key configured (${maskApiKey(savedConfig.apiKey)})`
                   : providerSpec.placeholder
               }
-              aria-describedby="settings-connection-status settings-key-note"
+              aria-describedby={savedConfig && activeSpec ? 'settings-connection-status' : undefined}
             />
             <button
               className="icon-button settings-key-toggle"
@@ -563,13 +572,7 @@ export function SettingsDialog({
         >
           <div className="settings-model-reveal-clip">
             <div className="settings-field settings-model-field">
-              <div className="settings-label-row">
-                <label id="ai-model-label" htmlFor="ai-model-select">Model</label>
-                <span className="settings-verified-pill">
-                  <HugeiconsIcon icon={CheckmarkCircle02Icon} size={13} strokeWidth={iconStroke} aria-hidden="true" />
-                  Key verified
-                </span>
-              </div>
+              <label id="ai-model-label" htmlFor="ai-model-select">Model</label>
               <SettingsSelectMenu
                 id="ai-model-select"
                 labelId="ai-model-label"
@@ -583,14 +586,11 @@ export function SettingsDialog({
           </div>
         </div>
 
-        <p id="settings-connection-status" className="settings-status" data-connected={Boolean(savedConfig)}>
-          {savedConfig && activeSpec
-            ? `Connected · ${activeSpec.name} (${activeModelLabel}) · ${maskApiKey(savedConfig.apiKey)}`
-            : 'Using shared daily quota'}
-        </p>
-        <p id="settings-key-note" className="settings-note">
-          Your key stays in memory for this session and contacts {providerSpec.name} directly using your own account limits.
-        </p>
+        {savedConfig && activeSpec && (
+          <p id="settings-connection-status" className="settings-status" data-connected="true">
+            {`Connected · ${activeSpec.name} (${activeModelLabel}) · ${maskApiKey(savedConfig.apiKey)}`}
+          </p>
+        )}
         {error && <p className="settings-error" role="alert">{error}</p>}
         <div className="settings-actions">
           {savedConfig && (
@@ -623,6 +623,7 @@ export function FreePassagesDialog({
   const dialog = useRef<HTMLDialogElement>(null)
   const [category, setCategory] = useState<SampleCategory>('All')
   const items = listSamples({ category, duration })
+  const durationIndex = Math.max(0, DURATIONS.indexOf(duration))
 
   useEffect(() => {
     const element = dialog.current
@@ -632,24 +633,21 @@ export function FreePassagesDialog({
   return (
     <dialog className="passages-dialog" ref={dialog} onClose={onClose} aria-labelledby="passages-title">
       <div className="passages-heading">
-        <div>
-          <h2 id="passages-title">Free passages</h2>
-          <p className="passages-subtitle">100 built-in passages · Instant practice without AI quota or API keys</p>
-        </div>
+        <h2 id="passages-title">Free passages</h2>
         <div className="passages-heading-actions">
           <button
-            className="action-button action-button-primary passages-random-button"
+            className="action-button passages-random-button"
             type="button"
             onClick={() => {
               dialog.current?.close()
               onRandomPassage()
             }}
           >
-            <HugeiconsIcon icon={DiceFaces05Icon} size={17} strokeWidth={iconStroke} aria-hidden="true" />
+            <HugeiconsIcon icon={DiceFaces05Icon} size={16} strokeWidth={iconStroke} aria-hidden="true" />
             Random passage
           </button>
           <button
-            className="icon-button"
+            className="icon-button passages-close-button"
             type="button"
             aria-label="Close free passages"
             onClick={() => dialog.current?.close()}
@@ -660,7 +658,7 @@ export function FreePassagesDialog({
       </div>
 
       <div className="passages-filters">
-        <div className="passages-filter-group" role="group" aria-label="Category">
+        <div className="passages-filter-group passages-category-group" role="group" aria-label="Category">
           {SAMPLE_CATEGORIES.map(item => (
             <button
               key={item}
@@ -673,12 +671,17 @@ export function FreePassagesDialog({
             </button>
           ))}
         </div>
-        <div className="passages-filter-group passages-duration-group" role="group" aria-label="Test duration">
+        <div
+          className="passages-duration-group"
+          role="group"
+          aria-label="Test duration"
+          style={{ '--duration-index': durationIndex } as CSSProperties}
+        >
           {DURATIONS.map(seconds => (
             <button
               key={seconds}
               type="button"
-              className="filter-chip filter-chip-mono"
+              className="duration-segment"
               aria-pressed={duration === seconds}
               onClick={() => onDurationChange(seconds)}
             >
@@ -707,14 +710,14 @@ export function FreePassagesDialog({
               }}
             >
               <div className="passage-card-header">
-                <span className="passage-card-title">
-                  {item.title}
-                  <span className="passage-card-excerpt"> — {item.excerptLabel}</span>
-                </span>
-                <span className="passage-card-meta">
+                <div className="passage-card-heading">
+                  <span className="passage-card-title">{item.title}</span>
+                  <span className="passage-card-source">{item.source}</span>
+                </div>
+                <div className="passage-card-meta">
                   <span className="passage-card-badge">{item.category}</span>
-                  <span> · {item.duration}s · ~{item.wordCount} words</span>
-                </span>
+                  <span className="passage-card-duration">{item.duration}s</span>
+                </div>
               </div>
               <p className="passage-card-preview">{item.preview}</p>
             </button>
