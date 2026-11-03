@@ -1,0 +1,118 @@
+.typing-stage {
+  position: relative;
+  border-radius: var(--radius-sm);
+}
+
+.typing-viewport {
+  height: 4lh;
+  overflow: hidden;
+  overflow-anchor: none;
+  user-select: none;
+  font-family: var(--font-mono);
+  font-size: clamp(1.125rem, 2.35vw, 1.5rem);
+  line-height: 1.75;
+}
+
+.typing-passage {
+  position: relative;
+  margin: 0;
+  padding-inline-start: 0.15em;
+  /* Spaces at line ends stay on their line, so every line starts flush left. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--color-secondary);
+}
+
+.typing-word {
+  position: relative;
+  display: inline-block;
+  max-inline-size: 100%;
+  white-space: normal;
+}
+
+.typing-char {
+  position: relative;
+}
+
+.typing-char--correct {
+  color: var(--color-text);
+}
+
+.typing-char--wrong {
+  color: var(--color-error);
+}
+
+.typing-char--missed {
+  color: color-mix(in srgb, var(--color-error) 70%, var(--color-secondary));
+}
+
+.typing-word[data-current-word] .typing-char--pending {
+  color: color-mix(in srgb, var(--color-text) 40%, var(--color-secondary));
+}
+
+.typing-caret {
+  position: absolute;
+  z-index: 2;
+  inset: 0 auto auto 0;
+  width: 2px;
+  height: 1em;
+  border-radius: 2px;
+  background: var(--color-accent);
+  opacity: 0.5;
+  visibility: hidden;
+  pointer-events: none;
+  transform-origin: top left;
+}
+
+.typing-caret[data-positioned] {
+  visibility: visible;
+  opacity: 1;
+  transition: transform 105ms cubic-bezier(0.2, 0.65, 0.3, 1);
+}
+
+.typing-caret[data-positioned][data-line-change="true"] { transition-duration: 155ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .typing-caret[data-positioned],
+  .typing-caret[data-positioned][data-line-change="true"] { transition: none; }
+}
+
+.typing-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  resize: none;
+  font-size: 1rem;
+  cursor: text;
+}
+
+.typing-feedback {
+  min-height: 1.25rem;
+  margin-top: var(--space-2);
+  text-align: center;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+}
+
+.typing-focus-hint {
+  margin: 0;
+  color: var(--color-secondary);
+}
+
+.typing-test:focus-within .typing-focus-hint {
+  visibility: hidden;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .typing-focus-touch {
+    display: none;
+  }
+}
+
+@media (max-height: 480px) and (pointer: coarse) {
+  .typing-viewport {
+    height: 3lh;
+  }
+}

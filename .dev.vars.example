@@ -1,0 +1,12 @@
+# Optional Cloudflare Turnstile secret key for bot verification in the Worker.
+TURNSTILE_SECRET_KEY=
+
+# Optional comma-separated list of allowed origins for Worker requests.
+ALLOWED_ORIGINS=http://127.0.0.1:5173,http://localhost:5173,http://127.0.0.1:8787,http://localhost:8787,http://127.0.0.1:4173,http://localhost:4173
+
+# Optional Workers AI model override.
+AI_MODEL=@cf/google/gemma-4-26b-a4b-it
+
+# Optional OpenAI fallback credentials when Workers AI is not bound.
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-6-luna

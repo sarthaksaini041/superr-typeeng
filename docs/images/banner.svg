@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="360" viewBox="0 0 1280 360" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">superr-typeeng</title>
+  <desc id="desc">A focused typing test with AI-generated passages and 100 free built-in passages.</desc>
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="115%" r="75%">
+      <stop offset="0" stop-color="#f04444" stop-opacity="0.32"/>
+      <stop offset="0.55" stop-color="#3a0d0d" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#090909" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" stroke="#ffffff" stroke-opacity="0.035"/>
+    </pattern>
+  </defs>
+  <rect width="1280" height="360" rx="24" fill="#090909"/>
+  <rect width="1280" height="360" rx="24" fill="url(#grid)"/>
+  <rect width="1280" height="360" rx="24" fill="url(#glow)"/>
+  <rect x="0.5" y="0.5" width="1279" height="359" rx="23.5" stroke="#2a2a2a"/>
+
+  <g transform="translate(560 64)">
+    <g stroke="#f04444" stroke-width="5">
+      <ellipse cx="54" cy="40" rx="22" ry="28"/>
+      <ellipse cx="106" cy="40" rx="22" ry="28"/>
+    </g>
+    <g fill="#f04444">
+      <circle cx="60" cy="40" r="7"/>
+      <circle cx="112" cy="40" r="7"/>
+    </g>
+  </g>
+
+  <text x="640" y="208" text-anchor="middle" fill="#f5f5f5"
+    font-family="Inter, 'Helvetica Neue', system-ui, sans-serif" font-size="64" font-weight="700" letter-spacing="-3">superr-typeeng</text>
+  <text x="640" y="258" text-anchor="middle" fill="#a3a3a3"
+    font-family="'SFMono-Regular', 'Cascadia Mono', 'Liberation Mono', Consolas, monospace" font-size="22">type anything<tspan fill="#f04444">|</tspan></text>
+  <text x="640" y="306" text-anchor="middle" fill="#858585"
+    font-family="Inter, 'Helvetica Neue', system-ui, sans-serif" font-size="17" letter-spacing="0.5">AI passages on any topic · 100 free passages · 30s to 180s</text>
+</svg>
