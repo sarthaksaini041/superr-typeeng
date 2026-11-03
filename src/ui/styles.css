@@ -1,5 +1,6 @@
 :root {
   color-scheme: dark;
+  interpolate-size: allow-keywords;
   --color-bg: #090909;
   --color-surface: #111111;
   --color-raised: #191919;
@@ -665,7 +666,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   .generation-messages p { display: none; animation: none; }
   .generation-messages p:first-child { display: block; opacity: 1; }
   .icon-button, .duration-trigger, .duration-options, .topic-field, .topic-progress, .topic-progress-fill,
-  .text-button, .action-button { transition: none; }
+  .text-button, .action-button, .settings-select-trigger, .settings-select-chevron, .settings-select-options,
+  .settings-select-item, .settings-model-reveal { transition: none; }
 }
 
 .brand-actions { display: flex; gap: var(--space-2); }
@@ -820,8 +822,33 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   color: var(--color-text);
 }
 
-.settings-dialog input,
-.settings-dialog select {
+.settings-dialog input {
+  width: 100%;
+  min-height: var(--control-size);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  transition: border-color var(--transition-fast);
+}
+
+.settings-dialog input:hover {
+  border-color: var(--color-border-active);
+}
+
+.settings-select-menu {
+  position: relative;
+  display: grid;
+}
+
+.settings-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
   width: 100%;
   min-height: var(--control-size);
   padding-inline: var(--space-3);
@@ -830,16 +857,165 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   background: var(--color-bg);
   color: var(--color-text);
   font-size: 0.875rem;
-  transition: border-color var(--transition-fast);
+  font-weight: 500;
+  text-align: start;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
 }
 
-.settings-dialog input {
-  font-family: var(--font-mono);
-}
-
-.settings-dialog input:hover,
-.settings-dialog select:hover {
+.settings-select-trigger:hover:enabled,
+.settings-select-trigger[aria-expanded="true"] {
   border-color: var(--color-border-active);
+  background: var(--color-raised);
+}
+
+.settings-select-trigger:disabled {
+  color: var(--color-muted);
+}
+
+.settings-select-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-select-chevron {
+  display: inline-flex;
+  flex: none;
+  color: var(--color-secondary);
+  transition: transform 200ms cubic-bezier(0.2, 0.75, 0.3, 1), color var(--transition-fast);
+}
+
+.settings-select-trigger[aria-expanded="true"] .settings-select-chevron {
+  color: var(--color-accent);
+  transform: rotate(180deg);
+}
+
+.settings-select-options {
+  --select-expand: 210ms cubic-bezier(0.2, 0.75, 0.3, 1);
+  position: absolute;
+  z-index: 5;
+  inset: calc(100% + var(--space-1)) 0 auto;
+  display: grid;
+  grid-template-rows: 1fr;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 var(--space-3) var(--space-6) rgb(0 0 0 / 72%);
+  transition: grid-template-rows var(--select-expand), opacity var(--select-expand);
+}
+
+.settings-select-options[data-side="above"] {
+  inset: auto 0 calc(100% + var(--space-1));
+}
+
+.settings-select-options[aria-hidden="true"] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.settings-select-clip {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.settings-select-panel {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  max-block-size: 14.5rem;
+  padding: var(--space-1);
+  border: 1px solid var(--color-border-active);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-active) transparent;
+}
+
+.settings-select-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 2.375rem;
+  padding-inline: var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-secondary);
+  font-size: 0.84375rem;
+  font-weight: 480;
+  text-align: start;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.settings-select-item:hover,
+.settings-select-item[data-highlighted="true"] {
+  background: var(--color-raised);
+  color: var(--color-text);
+}
+
+.settings-select-item[aria-selected="true"] {
+  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-raised));
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.settings-select-item-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-select-check {
+  flex: none;
+  color: var(--color-accent);
+}
+
+.settings-model-reveal {
+  display: grid;
+  grid-template-rows: 1fr;
+  block-size: auto;
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    grid-template-rows 260ms cubic-bezier(0.2, 0.75, 0.3, 1),
+    block-size 260ms cubic-bezier(0.2, 0.75, 0.3, 1),
+    opacity 220ms cubic-bezier(0.2, 0.75, 0.3, 1),
+    transform 220ms cubic-bezier(0.2, 0.75, 0.3, 1),
+    margin-block 260ms cubic-bezier(0.2, 0.75, 0.3, 1);
+}
+
+.settings-model-reveal[data-verified="false"] {
+  grid-template-rows: 0fr;
+  block-size: 0;
+  opacity: 0;
+  transform: translateY(-0.25rem);
+  margin-block: calc(-1 * var(--space-3)) 0;
+  pointer-events: none;
+}
+
+.settings-model-reveal-clip {
+  min-height: 0;
+  overflow: visible;
+}
+
+.settings-model-reveal[data-verified="false"] .settings-model-reveal-clip {
+  overflow: hidden;
+}
+
+.settings-verified-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-accent);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 540;
 }
 
 .settings-key-input-wrap {

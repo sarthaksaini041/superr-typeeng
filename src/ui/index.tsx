@@ -1,6 +1,7 @@
 import {
   Add01Icon,
   AlertCircleIcon,
+  ArrowDown01Icon,
   Book02Icon,
   Cancel01Icon,
   CheckmarkCircle02Icon,
@@ -10,6 +11,7 @@ import {
   SentIcon,
   Settings01Icon,
   TextAllCapsIcon,
+  Tick02Icon,
   ViewIcon,
   ViewOffSlashIcon,
 } from '@hugeicons/core-free-icons'
@@ -85,6 +87,225 @@ export function Brand({
   )
 }
 
+type MenuPlacement = { side: 'below' | 'above'; maxHeight?: number }
+
+// Space kept between the menu and the trigger, and between the menu and the screen edge.
+const MENU_GAP = 8
+const MENU_EDGE = 8
+
+/** Opens the menu on the side with room for it, capping its height when neither side fits. */
+function placeMenu(trigger: DOMRect, menuHeight: number, container?: DOMRect | null): MenuPlacement {
+  const viewport = window.visualViewport
+  const viewportTop = viewport?.offsetTop ?? 0
+  const viewportBottom = viewportTop + (viewport?.height ?? document.documentElement.clientHeight)
+  const visibleTop = container ? Math.max(viewportTop, container.top + 4) : viewportTop
+  const visibleBottom = container ? Math.min(viewportBottom, container.bottom - 4) : viewportBottom
+  const below = visibleBottom - trigger.bottom - MENU_GAP - MENU_EDGE
+  const above = trigger.top - visibleTop - MENU_GAP - MENU_EDGE
+  if (menuHeight <= below) return { side: 'below' }
+  if (menuHeight <= above) return { side: 'above' }
+  // Whole pixels keep the scrollable area aligned with integer scroll offsets.
+  return below >= above
+    ? { side: 'below', maxHeight: Math.max(0, Math.floor(below)) }
+    : { side: 'above', maxHeight: Math.max(0, Math.floor(above)) }
+}
+
+interface SelectMenuOption {
+  readonly id: string
+  readonly label: string
+}
+
+function SettingsSelectMenu({
+  id,
+  labelId,
+  label,
+  value,
+  options,
+  onChange,
+  disabled = false,
+}: {
+  id: string
+  labelId: string
+  label: string
+  value: string
+  options: readonly SelectMenuOption[]
+  onChange: (value: string) => void
+  disabled?: boolean
+}) {
+  const listboxId = useId()
+  const trigger = useRef<HTMLButtonElement>(null)
+  const panel = useRef<HTMLDivElement>(null)
+  const [active, setActive] = useState<number | null>(null)
+  const [placement, setPlacement] = useState<MenuPlacement>({ side: 'below' })
+  const open = active !== null && !disabled
+  const selectedIndex = Math.max(
+    0,
+    options.findIndex(item => item.id === value),
+  )
+  const selectedOption = options[selectedIndex] ?? options[0]
+
+  useLayoutEffect(() => {
+    if (!open) return
+    let frame = 0
+    function measure() {
+      frame = 0
+      const button = trigger.current
+      const list = panel.current
+      if (!button || !list) return
+      const border = list.offsetHeight - list.clientHeight
+      const dialogRect = button.closest('dialog')?.getBoundingClientRect() ?? null
+      const naturalHeight = Math.min(list.scrollHeight + border, 232)
+      const next = placeMenu(button.getBoundingClientRect(), naturalHeight, dialogRect)
+      setPlacement(current =>
+        current.side === next.side && current.maxHeight === next.maxHeight ? current : next,
+      )
+    }
+    function queueMeasure() {
+      if (!frame) frame = window.requestAnimationFrame(measure)
+    }
+    measure()
+    const viewport = window.visualViewport
+    window.addEventListener('resize', queueMeasure)
+    window.addEventListener('scroll', queueMeasure, { passive: true, capture: true })
+    viewport?.addEventListener('resize', queueMeasure)
+    viewport?.addEventListener('scroll', queueMeasure)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.removeEventListener('resize', queueMeasure)
+      window.removeEventListener('scroll', queueMeasure, { capture: true })
+      viewport?.removeEventListener('resize', queueMeasure)
+      viewport?.removeEventListener('scroll', queueMeasure)
+    }
+  }, [open, options.length])
+
+  useEffect(() => {
+    const list = panel.current
+    const option = active === null ? null : list?.children[active]
+    if (!list || !(option instanceof HTMLElement)) return
+    const view = list.getBoundingClientRect()
+    const item = option.getBoundingClientRect()
+    const borderWidth = (list.offsetHeight - list.clientHeight) / 2
+    const top = view.top + borderWidth
+    const bottom = view.bottom - borderWidth
+    if (item.top < top) list.scrollTop -= Math.ceil(top - item.top)
+    else if (item.bottom > bottom) list.scrollTop += Math.ceil(item.bottom - bottom)
+  }, [active])
+
+  function choose(index: number) {
+    const chosen = options[index]
+    if (chosen) onChange(chosen.id)
+    setActive(null)
+    trigger.current?.focus()
+  }
+
+  function handleKey(event: KeyboardEvent<HTMLButtonElement>) {
+    const key = event.key
+    if (key === 'Escape' && open) {
+      event.preventDefault()
+      event.stopPropagation()
+      setActive(null)
+    } else if (key === 'ArrowDown' || key === 'ArrowUp') {
+      event.preventDefault()
+      const step = key === 'ArrowDown' ? 1 : -1
+      setActive(
+        active === null
+          ? selectedIndex
+          : Math.min(options.length - 1, Math.max(0, active + step)),
+      )
+    } else if (open && (key === 'Home' || key === 'End')) {
+      event.preventDefault()
+      setActive(key === 'Home' ? 0 : options.length - 1)
+    } else if (active !== null && (key === 'Enter' || key === ' ')) {
+      event.preventDefault()
+      choose(active)
+    } else if (key === 'Tab') {
+      setActive(null)
+    }
+  }
+
+  return (
+    <div
+      className="settings-select-menu"
+      onBlur={event => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setActive(null)
+      }}
+    >
+      <button
+        ref={trigger}
+        id={id}
+        className="settings-select-trigger"
+        type="button"
+        role="combobox"
+        aria-labelledby={labelId}
+        aria-label={label}
+        aria-expanded={open}
+        aria-controls={listboxId}
+        aria-activedescendant={open && active !== null ? `${listboxId}-${active}` : undefined}
+        data-value={value}
+        disabled={disabled}
+        onKeyDown={handleKey}
+        onClick={() => setActive(open ? null : selectedIndex)}
+      >
+        <span className="settings-select-value">{selectedOption?.label ?? value}</span>
+        <span className="settings-select-chevron" aria-hidden="true">
+          <HugeiconsIcon icon={ArrowDown01Icon} size={16} strokeWidth={iconStroke} aria-hidden="true" />
+        </span>
+      </button>
+      <div
+        id={listboxId}
+        className="settings-select-options"
+        role="listbox"
+        aria-label={label}
+        data-side={placement.side}
+        aria-hidden={!open}
+        inert={!open}
+      >
+        <div className="settings-select-clip">
+          <div
+            className="settings-select-panel"
+            ref={panel}
+            style={placement.maxHeight === undefined ? undefined : { maxBlockSize: placement.maxHeight }}
+          >
+            {options.map((option, index) => {
+              const isSelected = option.id === value
+              return (
+                <button
+                  key={option.id}
+                  id={`${listboxId}-${index}`}
+                  className="settings-select-item"
+                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  data-value={option.id}
+                  data-highlighted={active === index}
+                  tabIndex={-1}
+                  onClick={() => choose(index)}
+                >
+                  <span className="settings-select-item-label">{option.label}</span>
+                  {isSelected && (
+                    <HugeiconsIcon
+                      icon={Tick02Icon}
+                      size={15}
+                      strokeWidth={iconStroke}
+                      aria-hidden="true"
+                      className="settings-select-check"
+                    />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const PROVIDER_SELECT_OPTIONS: readonly SelectMenuOption[] = AI_PROVIDERS.map(provider => ({
+  id: provider.id,
+  label: provider.name,
+}))
+
 export function SettingsDialog({
   onClose,
   remainingQuota = DAILY_FREE_GENERATION_LIMIT,
@@ -122,6 +343,19 @@ export function SettingsDialog({
   }, [])
 
   const isCurrentProviderConfigured = savedConfig?.provider === selectedProvider
+  const trimmedKey = keyInput.trim()
+  const effectiveKey =
+    trimmedKey.length > 0
+      ? trimmedKey
+      : isCurrentProviderConfigured && savedConfig
+        ? savedConfig.apiKey
+        : ''
+  const trimmedAccountId = accountIdInput.trim()
+  const isKeyFormatValid = validateProviderApiKey(selectedProvider, effectiveKey)
+  const isAccountValid =
+    !providerSpec.requiresAccountId || validateCloudflareAccountId(trimmedAccountId)
+  const isKeyVerified = isKeyFormatValid && isAccountValid
+
   const activeSpec = savedConfig ? AI_PROVIDER_BY_ID[savedConfig.provider] : null
   const activeModelLabel = activeSpec
     ? (activeSpec.models.find(item => item.id === savedConfig?.model)?.label ?? savedConfig?.model)
@@ -137,21 +371,32 @@ export function SettingsDialog({
     setError('')
   }
 
-  function handleSave() {
-    const trimmedKey = keyInput.trim()
-    const effectiveKey =
-      trimmedKey.length > 0
-        ? trimmedKey
-        : isCurrentProviderConfigured && savedConfig
-          ? savedConfig.apiKey
-          : ''
+  function handleModelChange(nextModel: string) {
+    setSelectedModel(nextModel)
+    if (error) setError('')
+    if (isKeyVerified) {
+      const nextConfig: ByokConfig = {
+        provider: selectedProvider,
+        apiKey: effectiveKey,
+        model: nextModel,
+        ...(providerSpec.requiresAccountId ? { accountId: trimmedAccountId } : {}),
+      }
+      try {
+        saveByokConfig(nextConfig)
+        setSavedConfig(nextConfig)
+        onSaveByok?.(nextConfig)
+      } catch {
+        // Defer error reporting to explicit Save action if needed.
+      }
+    }
+  }
 
+  function handleSave() {
     if (!validateProviderApiKey(selectedProvider, effectiveKey)) {
       setError(`Enter a valid ${providerSpec.name} API key.`)
       return
     }
 
-    const trimmedAccountId = accountIdInput.trim()
     if (providerSpec.requiresAccountId && !validateCloudflareAccountId(trimmedAccountId)) {
       setError('Enter a valid Cloudflare Account ID.')
       return
@@ -225,40 +470,16 @@ export function SettingsDialog({
           handleSave()
         }}
       >
-        <div className="settings-field-grid">
-          <div className="settings-field">
-            <label htmlFor="ai-provider-select">AI provider</label>
-            <select
-              id="ai-provider-select"
-              name="provider"
-              value={selectedProvider}
-              onChange={event => handleProviderChange(event.currentTarget.value)}
-            >
-              {AI_PROVIDERS.map(provider => (
-                <option key={provider.id} value={provider.id}>
-                  {provider.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="settings-field">
-            <label htmlFor="ai-model-select">Model</label>
-            <select
-              id="ai-model-select"
-              name="model"
-              value={selectedModel}
-              onChange={event => {
-                setSelectedModel(event.currentTarget.value)
-                if (error) setError('')
-              }}
-            >
-              {providerSpec.models.map(model => (
-                <option key={model.id} value={model.id}>
-                  {model.label}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="settings-field">
+          <label id="ai-provider-label" htmlFor="ai-provider-select">AI provider</label>
+          <SettingsSelectMenu
+            id="ai-provider-select"
+            labelId="ai-provider-label"
+            label="AI provider"
+            value={selectedProvider}
+            options={PROVIDER_SELECT_OPTIONS}
+            onChange={handleProviderChange}
+          />
         </div>
 
         <div className="settings-field">
@@ -333,6 +554,34 @@ export function SettingsDialog({
             />
           </div>
         )}
+
+        <div
+          className="settings-model-reveal"
+          data-verified={isKeyVerified}
+          aria-hidden={!isKeyVerified}
+          inert={!isKeyVerified}
+        >
+          <div className="settings-model-reveal-clip">
+            <div className="settings-field settings-model-field">
+              <div className="settings-label-row">
+                <label id="ai-model-label" htmlFor="ai-model-select">Model</label>
+                <span className="settings-verified-pill">
+                  <HugeiconsIcon icon={CheckmarkCircle02Icon} size={13} strokeWidth={iconStroke} aria-hidden="true" />
+                  Key verified
+                </span>
+              </div>
+              <SettingsSelectMenu
+                id="ai-model-select"
+                labelId="ai-model-label"
+                label="Model"
+                value={selectedModel}
+                options={providerSpec.models}
+                disabled={!isKeyVerified}
+                onChange={handleModelChange}
+              />
+            </div>
+          </div>
+        </div>
 
         <p id="settings-connection-status" className="settings-status" data-connected={Boolean(savedConfig)}>
           {savedConfig && activeSpec
@@ -507,27 +756,6 @@ interface SetupProps {
   onCancel?: () => void
   remainingQuota?: number
   byokConfig?: ByokConfig | null
-}
-
-type MenuPlacement = { side: 'below' | 'above'; maxHeight?: number }
-
-// Space kept between the menu and the trigger, and between the menu and the screen edge.
-const MENU_GAP = 8
-const MENU_EDGE = 8
-
-/** Opens the menu on the side with room for it, capping its height when neither side fits. */
-function placeMenu(trigger: DOMRect, menuHeight: number): MenuPlacement {
-  const viewport = window.visualViewport
-  const visibleTop = viewport?.offsetTop ?? 0
-  const visibleBottom = visibleTop + (viewport?.height ?? document.documentElement.clientHeight)
-  const below = visibleBottom - trigger.bottom - MENU_GAP - MENU_EDGE
-  const above = trigger.top - visibleTop - MENU_GAP - MENU_EDGE
-  if (menuHeight <= below) return { side: 'below' }
-  if (menuHeight <= above) return { side: 'above' }
-  // Whole pixels keep the scrollable area aligned with integer scroll offsets.
-  return below >= above
-    ? { side: 'below', maxHeight: Math.max(0, Math.floor(below)) }
-    : { side: 'above', maxHeight: Math.max(0, Math.floor(above)) }
 }
 
 function DurationMenu({ duration, onChange, disabled }: {

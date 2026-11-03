@@ -558,14 +558,19 @@ test('multi-provider BYOK settings stay in memory only, validate keys, mask save
   await page.goto('/')
   await page.getByRole('button', { name: 'Settings' }).click()
   const dialog = page.getByRole('dialog', { name: 'Settings' })
-  const providerSelect = dialog.getByLabel('AI provider')
-  const modelSelect = dialog.getByLabel('Model')
+  const providerCombobox = dialog.getByRole('combobox', { name: 'AI provider' })
+  const modelReveal = dialog.locator('.settings-model-reveal')
+  const modelCombobox = dialog.getByRole('combobox', { name: 'Model' })
+
+  // Model selector is hidden before a valid API key is entered
+  await expect(modelReveal).toHaveAttribute('data-verified', 'false')
 
   const expectedProviders = [
     {
       id: 'google',
       name: 'Google Gemini',
       defaultModel: 'gemini-2.5-flash',
+      defaultModelLabel: 'Gemini 2.5 Flash',
       placeholder: 'AIza…',
       keyUrl: 'https://aistudio.google.com/apikey',
       requiresAccount: false,
@@ -574,6 +579,7 @@ test('multi-provider BYOK settings stay in memory only, validate keys, mask save
       id: 'openai',
       name: 'OpenAI',
       defaultModel: 'gpt-4o-mini',
+      defaultModelLabel: 'GPT-4o mini',
       placeholder: 'sk-…',
       keyUrl: 'https://platform.openai.com/api-keys',
       requiresAccount: false,
@@ -582,6 +588,7 @@ test('multi-provider BYOK settings stay in memory only, validate keys, mask save
       id: 'anthropic',
       name: 'Anthropic Claude',
       defaultModel: 'claude-3-5-haiku-latest',
+      defaultModelLabel: 'Claude 3.5 Haiku',
       placeholder: 'sk-ant-…',
       keyUrl: 'https://console.anthropic.com/settings/keys',
       requiresAccount: false,
@@ -590,6 +597,7 @@ test('multi-provider BYOK settings stay in memory only, validate keys, mask save
       id: 'openrouter',
       name: 'OpenRouter',
       defaultModel: 'google/gemma-3-27b-it',
+      defaultModelLabel: 'Gemma 3 27B IT',
       placeholder: 'sk-or-v1-…',
       keyUrl: 'https://openrouter.ai/keys',
       requiresAccount: false,
@@ -598,6 +606,7 @@ test('multi-provider BYOK settings stay in memory only, validate keys, mask save
       id: 'groq',
       name: 'Groq',
       defaultModel: 'llama-3.3-70b-versatile',
+      defaultModelLabel: 'Llama 3.3 70B Versatile',
       placeholder: 'gsk_…',
       keyUrl: 'https://console.groq.com/keys',
       requiresAccount: false,
@@ -606,6 +615,7 @@ test('multi-provider BYOK settings stay in memory only, validate keys, mask save
       id: 'mistral',
       name: 'Mistral AI',
       defaultModel: 'mistral-small-latest',
+      defaultModelLabel: 'Mistral Small',
       placeholder: 'mistral-…',
       keyUrl: 'https://console.mistral.ai/api-keys',
       requiresAccount: false,
@@ -614,6 +624,7 @@ test('multi-provider BYOK settings stay in memory only, validate keys, mask save
       id: 'deepseek',
       name: 'DeepSeek',
       defaultModel: 'deepseek-chat',
+      defaultModelLabel: 'DeepSeek V3 (Chat)',
       placeholder: 'sk-…',
       keyUrl: 'https://platform.deepseek.com/api_keys',
       requiresAccount: false,
@@ -622,6 +633,7 @@ test('multi-provider BYOK settings stay in memory only, validate keys, mask save
       id: 'together',
       name: 'Together AI',
       defaultModel: 'meta-llama/Llama-3.3-70B-Instruct-Turbo',
+      defaultModelLabel: 'Llama 3.3 70B Turbo',
       placeholder: 'tgp_v1_…',
       keyUrl: 'https://api.together.ai/settings/api-keys',
       requiresAccount: false,
@@ -630,6 +642,7 @@ test('multi-provider BYOK settings stay in memory only, validate keys, mask save
       id: 'fireworks',
       name: 'Fireworks AI',
       defaultModel: 'accounts/fireworks/models/llama-v3p3-70b-instruct',
+      defaultModelLabel: 'Llama 3.3 70B Instruct',
       placeholder: 'fw_…',
       keyUrl: 'https://fireworks.ai/account/api-keys',
       requiresAccount: false,
@@ -638,6 +651,7 @@ test('multi-provider BYOK settings stay in memory only, validate keys, mask save
       id: 'cloudflare',
       name: 'Cloudflare Workers AI',
       defaultModel: '@cf/google/gemma-4-26b-a4b-it',
+      defaultModelLabel: 'Gemma 4 26B A4B Instruct',
       placeholder: 'cfut_…',
       keyUrl: 'https://dash.cloudflare.com/profile/api-tokens',
       requiresAccount: true,
@@ -645,8 +659,11 @@ test('multi-provider BYOK settings stay in memory only, validate keys, mask save
   ]
 
   for (const spec of expectedProviders) {
-    await providerSelect.selectOption(spec.id)
-    await expect(modelSelect).toHaveValue(spec.defaultModel)
+    await providerCombobox.click()
+    await dialog.getByRole('option', { name: spec.name, exact: true }).click()
+    await expect(providerCombobox).toHaveAttribute('data-value', spec.id)
+    await expect(providerCombobox).toHaveText(spec.name)
+    await expect(modelReveal).toHaveAttribute('data-verified', 'false')
     const keyInput = dialog.getByLabel(`${spec.name} API key`)
     await expect(keyInput).toHaveAttribute('placeholder', spec.placeholder)
     const keyLink = dialog.getByRole('link', { name: `Get ${spec.name} API key` })
@@ -658,14 +675,16 @@ test('multi-provider BYOK settings stay in memory only, validate keys, mask save
     }
   }
 
-  // Validate Cloudflare Account ID requirement before saving
+  // Validate Cloudflare Account ID requirement before saving (Model stays hidden until Account ID is also valid)
   await dialog.getByLabel('Cloudflare Workers AI API key').fill('cfut_valid_cloudflare_token_12345')
   await dialog.getByLabel('Cloudflare Account ID').fill('short')
+  await expect(modelReveal).toHaveAttribute('data-verified', 'false')
   await dialog.getByRole('button', { name: 'Save key' }).click()
   await expect(dialog.getByRole('alert')).toHaveText('Enter a valid Cloudflare Account ID.')
 
   // Switch to Google Gemini and test password show/hide toggle + key validation
-  await providerSelect.selectOption('google')
+  await providerCombobox.click()
+  await dialog.getByRole('option', { name: 'Google Gemini', exact: true }).click()
   await expect(dialog.getByLabel('Cloudflare Account ID')).toHaveCount(0)
   const geminiKeyInput = dialog.getByLabel('Google Gemini API key')
   await expect(geminiKeyInput).toHaveAttribute('type', 'password')
@@ -674,16 +693,26 @@ test('multi-provider BYOK settings stay in memory only, validate keys, mask save
   await dialog.getByRole('button', { name: 'Hide API key' }).click()
   await expect(geminiKeyInput).toHaveAttribute('type', 'password')
 
-  // Reject empty or malformed API keys
+  // Reject empty or malformed API keys and keep Model hidden
   await dialog.getByRole('button', { name: 'Save key' }).click()
   await expect(dialog.getByRole('alert')).toHaveText('Enter a valid Google Gemini API key.')
   await geminiKeyInput.fill('invalid-gemini-key')
+  await expect(modelReveal).toHaveAttribute('data-verified', 'false')
   await dialog.getByRole('button', { name: 'Save key' }).click()
   await expect(dialog.getByRole('alert')).toHaveText('Enter a valid Google Gemini API key.')
 
-  // Save a valid Google Gemini BYOK configuration
+  // Entering a valid Google Gemini key smoothly reveals the Model dropdown
   const validGeminiKey = 'AIzaSyTestBrowserMemoryOnlyKey12345'
   await geminiKeyInput.fill(validGeminiKey)
+  await expect(modelReveal).toHaveAttribute('data-verified', 'true')
+  await expect(modelCombobox).toBeVisible()
+  await expect(modelCombobox).toHaveAttribute('data-value', 'gemini-2.5-flash')
+  await modelCombobox.click()
+  await dialog.getByRole('option', { name: 'Gemini 2.5 Pro', exact: true }).click()
+  await expect(modelCombobox).toHaveAttribute('data-value', 'gemini-2.5-pro')
+  await modelCombobox.click()
+  await dialog.getByRole('option', { name: 'Gemini 2.5 Flash', exact: true }).click()
+  await expect(modelCombobox).toHaveAttribute('data-value', 'gemini-2.5-flash')
   await dialog.getByRole('button', { name: 'Save key' }).click()
   await expect(dialog).toHaveCount(0)
   await expect(page.getByText('Connected · Google Gemini (Gemini 2.5 Flash)')).toBeVisible()
