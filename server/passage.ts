@@ -31,7 +31,6 @@ import {
   reserveQuotaSlot,
   resetsAtForKolkataDay,
   resolveVisitorIdentity,
-  syncVisitorQuotaUsed,
   toQuotaSummary,
   type QuotaEndpointPayload,
   type QuotaEnv,
@@ -536,7 +535,6 @@ function resolveClientKey(request: Request, clientKey?: string): string {
   return (
     clientKey
     ?? request.headers.get('cf-connecting-ip')?.trim()
-    ?? request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
     ?? 'unknown'
   )
 }
@@ -814,9 +812,6 @@ export async function handlePassage(
       if (quotaReserved) {
         const committed = await commitQuotaSlot(visitorIdentity.visitorKey, day, env)
         quotaReserved = false
-        if (!visitorIdentity.hasValidCookie) {
-          await syncVisitorQuotaUsed(`visitor:${visitorIdentity.visitorId}`, committed.used, day, env)
-        }
         quotaSummary = toQuotaSummary(committed)
       } else {
         const currentQuota = await getQuotaStatus(visitorIdentity.visitorKey, day, env)

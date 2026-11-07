@@ -898,7 +898,7 @@ export function Setup({
   return (
     <main className="setup-screen" aria-labelledby="setup-heading">
       <div className="setup-content">
-        <h1 id="setup-heading">What would you like to type?</h1>
+        <h1 id="setup-heading">Fuck u</h1>
         <form className="topic-form" onSubmit={event => {
           event.preventDefault()
           if (topic.trim() && !generating) onSubmit()

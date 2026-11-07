@@ -63,19 +63,16 @@ export interface QuotaEnv {
 }
 
 export interface VisitorIdentity {
-  visitorId: string
   visitorKey: string
-  ipKey: string
   hasValidCookie: boolean
   setCookieHeader: string | null
 }
 
-type QuotaAction = 'status' | 'reserve' | 'commit' | 'release' | 'sync'
+type QuotaAction = 'status' | 'reserve' | 'commit' | 'release'
 
 interface QuotaDoRequest {
   action: QuotaAction
   day: string
-  used?: number
 }
 
 const memoryQuotaStore = new Map<string, QuotaRecord>()
@@ -240,9 +237,7 @@ export async function resolveVisitorIdentity(
     const verifiedId = await verifyVisitorCookieValue(rawCookie, env)
     if (verifiedId) {
       return {
-        visitorId: verifiedId,
-        visitorKey: `visitor:${verifiedId}`,
-        ipKey,
+        visitorKey: ipKey,
         hasValidCookie: true,
         setCookieHeader: null,
       }
@@ -252,15 +247,13 @@ export async function resolveVisitorIdentity(
   const newVisitorId = crypto.randomUUID().toLowerCase()
   const signedValue = await signVisitorId(newVisitorId, env)
   return {
-    visitorId: newVisitorId,
     visitorKey: ipKey,
-    ipKey,
     hasValidCookie: false,
     setCookieHeader: formatVisitorSetCookie(signedValue, request),
   }
 }
 
-function applyQuotaAction(record: QuotaRecord, action: QuotaAction, day: string, syncUsed?: number) {
+function applyQuotaAction(record: QuotaRecord, action: QuotaAction, day: string) {
   if (record.day !== day) {
     record.day = day
     record.used = 0
@@ -308,20 +301,6 @@ function applyQuotaAction(record: QuotaRecord, action: QuotaAction, day: string,
       record.inFlight -= 1
     }
     record.used = Math.min(DAILY_FREE_LIMIT, record.used + 1)
-    const remaining = Math.max(0, DAILY_FREE_LIMIT - record.used - record.inFlight)
-    return {
-      limit: DAILY_FREE_LIMIT,
-      used: record.used,
-      remaining,
-      day,
-      resetsAt,
-    } satisfies QuotaStatus
-  }
-
-  if (action === 'sync') {
-    if (typeof syncUsed === 'number' && Number.isFinite(syncUsed)) {
-      record.used = Math.max(record.used, Math.min(DAILY_FREE_LIMIT, Math.floor(syncUsed)))
-    }
     const remaining = Math.max(0, DAILY_FREE_LIMIT - record.used - record.inFlight)
     return {
       limit: DAILY_FREE_LIMIT,
@@ -421,19 +400,6 @@ export async function releaseQuotaSlot(
   return applyQuotaAction(record, 'release', day) as QuotaStatus
 }
 
-export async function syncVisitorQuotaUsed(
-  visitorKey: string,
-  used: number,
-  day: string = currentKolkataDay(),
-  env?: QuotaEnv,
-): Promise<QuotaStatus> {
-  if (env?.QUOTA_DO) {
-    return callQuotaDurableObject<QuotaStatus>(env.QUOTA_DO, visitorKey, { action: 'sync', day, used })
-  }
-  const record = getMemoryRecord(visitorKey, day)
-  return applyQuotaAction(record, 'sync', day, used) as QuotaStatus
-}
-
 export class DailyQuotaDurableObject {
   private readonly state: QuotaDurableObjectStateLike
   private record: QuotaRecord | null = null
@@ -461,7 +427,7 @@ export class DailyQuotaDurableObject {
     const body = (await request.json()) as QuotaDoRequest
     const run = async () => {
       const record = await this.ensureRecord(body.day)
-      const result = applyQuotaAction(record, body.action, body.day, body.used)
+      const result = applyQuotaAction(record, body.action, body.day)
       if (body.action !== 'status') {
         await this.state.storage.put('quota', record)
       }

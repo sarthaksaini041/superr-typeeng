@@ -33,7 +33,7 @@
   ],
   "vars": {
     "AI_MODEL": "@cf/google/gemma-4-26b-a4b-it",
-    "ALLOWED_ORIGINS": "http://127.0.0.1:5173,http://localhost:5173,http://127.0.0.1:8787,http://localhost:8787,http://127.0.0.1:4173,http://localhost:4173,https://*.vercel.app,https://superr-typeeng.superr-typeeng.workers.dev"
+    "ALLOWED_ORIGINS": "http://127.0.0.1:5173,http://localhost:5173,http://127.0.0.1:8787,http://localhost:8787,http://127.0.0.1:4173,http://localhost:4173,https://superr-typeeng.vercel.app,https://superr-typeeng.superr-typeeng.workers.dev"
   },
   "assets": {
     "directory": "./dist",

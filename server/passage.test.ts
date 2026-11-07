@@ -660,7 +660,7 @@ describe('5/day shared quota & Asia/Kolkata midnight rollover', () => {
     expect(run).toHaveBeenCalledTimes(6)
   })
 
-  it('tracks quota across requests using the signed superr_visitor cookie and returns status on GET /api/quota', async () => {
+  it('keeps quota tied to the client IP when a visitor replaces their signed cookie', async () => {
     vi.stubEnv('OPENAI_API_KEY', '')
     const run = vi.fn().mockResolvedValue({ response: { passage: validPassage } })
     const env: PassageEnv = { AI: { run } }
@@ -678,17 +678,17 @@ describe('5/day shared quota & Asia/Kolkata midnight rollover', () => {
       timeZone: QUOTA_TIME_ZONE,
     })
 
-    // Generate using the cookie from a different IP
+    // Generate using the first cookie
     const genReq = request('Harbors', 30)
     genReq.headers.set('Cookie', cookiePair)
-    const genRes = await handlePassage(genReq, `different-ip-${clientId}`, env)
+    const genRes = await handlePassage(genReq, key(), env)
     expect(genRes.status).toBe(200)
     expect(genRes.headers.get('set-cookie')).toBeNull()
 
     const afterQuotaReq = new Request('https://typeeng.example/api/quota', {
-      headers: { Cookie: cookiePair },
+      headers: { Cookie: `superr_visitor=${await signVisitorId(crypto.randomUUID(), env)}` },
     })
-    const afterQuotaRes = await handleQuota(afterQuotaReq, `another-ip-${clientId}`, env)
+    const afterQuotaRes = await handleQuota(afterQuotaReq, key(), env)
     expect(await afterQuotaRes.json()).toMatchObject({
       limit: 5,
       used: 1,
@@ -697,7 +697,7 @@ describe('5/day shared quota & Asia/Kolkata midnight rollover', () => {
     })
   })
 
-  it('enforces the 5-generation cap atomically across concurrent requests with the same visitor cookie', async () => {
+  it('enforces the 5-generation cap atomically across concurrent requests from the same IP with different signed visitor cookies', async () => {
     vi.stubEnv('OPENAI_API_KEY', '')
     const run = vi.fn().mockImplementation(
       async () => {
@@ -706,12 +706,11 @@ describe('5/day shared quota & Asia/Kolkata midnight rollover', () => {
       },
     )
     const env: PassageEnv = { AI: { run } }
-    const signedCookie = await signVisitorId('123e4567-e89b-42d3-a456-426614174000', env)
-
-    const concurrentRequests = Array.from({ length: 7 }, (_, index) => {
+    const concurrentRequests = Array.from({ length: 7 }, async () => {
+      const signedCookie = await signVisitorId(crypto.randomUUID(), env)
       const req = request('Harbors', 30)
       req.headers.set('Cookie', `superr_visitor=${signedCookie}`)
-      return handlePassage(req, `concurrent-ip-${index}-${clientId}`, env)
+      return handlePassage(req, key(), env)
     })
 
     const results = await Promise.all(concurrentRequests)
